@@ -193,30 +193,59 @@
     }
 
     function setupEventSource() {
-        const evtSource = new EventSource('/api/products/events');
+        if (window.evtSource) {
+            window.evtSource.close();
+        }
+
+        window.evtSource = new EventSource('/api/products/events');
         const updatesDiv = document.getElementById('updates');
 
-        evtSource.onmessage = function(event) {
-            const product = JSON.parse(event.data);
-            const update = document.createElement('p');
-            update.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${product.name} ($${product.price.toFixed(2)})`;
-            updatesDiv.prepend(update);
+        window.evtSource.onmessage = function(event) {
+            try {
+                const product = JSON.parse(event.data);
 
-            // Keep only the last 5 updates
-            while (updatesDiv.children.length > 5) {
-                updatesDiv.removeChild(updatesDiv.lastChild);
+                // Skip heartbeat messages
+                if (product.id === "heartbeat") {
+                    console.log("Heartbeat received");
+                    return;
+                }
+
+                // Display real updates
+                const update = document.createElement('p');
+                update.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${product.name} ($${product.price.toFixed(2)})`;
+                updatesDiv.prepend(update);
+
+                // Keep only the last 5 updates
+                while (updatesDiv.children.length > 5) {
+                    updatesDiv.removeChild(updatesDiv.lastChild);
+                }
+
+                // Also refresh the product list
+                loadAllProducts();
+            } catch (e) {
+                console.error("Error processing event data:", e);
             }
-
-            // Also refresh the product list
-            loadAllProducts();
         };
 
-        evtSource.onerror = function() {
-            console.error('EventSource failed. Reconnecting...');
-            evtSource.close();
-            setTimeout(setupEventSource, 5000);
+        window.evtSource.onerror = function(e) {
+            console.error('EventSource error:', e);
+            const errorMsg = document.createElement('p');
+            errorMsg.style.color = 'red';
+            errorMsg.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: Connection error. Will retry in 10s...`;
+            updatesDiv.prepend(errorMsg);
+
+            window.evtSource.close();
+            // Use a longer delay before reconnecting
+            setTimeout(setupEventSource, 10000);
         };
     }
+
+    // Clean up EventSource when page is unloaded
+    window.onbeforeunload = function() {
+        if (window.evtSource) {
+            window.evtSource.close();
+        }
+    };
 </script>
 </body>
 </html>

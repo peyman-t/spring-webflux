@@ -14,8 +14,8 @@ The application is a simple product management API that allows creating, reading
 
 - **Fully Reactive Stack**: End-to-end reactive programming using Spring WebFlux and Project Reactor
 - **Dual API Implementation**:
-  - Traditional annotation-based controllers
-  - Functional endpoints with router functions and handlers
+    - Traditional annotation-based controllers
+    - Functional endpoints with router functions and handlers
 - **Real-time Updates**: Server-Sent Events (SSE) for streaming product changes
 - **In-memory Database**: Reactive repository using `ConcurrentHashMap`
 - **Comprehensive Error Handling**: Global error handler with appropriate HTTP status codes
@@ -34,8 +34,8 @@ The project follows a standard layered architecture:
 2. **Repository Layer**: Data access operations with reactive APIs
 3. **Service Layer**: Business logic with reactive processing
 4. **Web Layer**: Two implementations of web endpoints:
-   - Annotation-based controllers with `@RestController`
-   - Functional endpoints with handler and router functions
+    - Annotation-based controllers with `@RestController`
+    - Functional endpoints with handler and router functions
 
 ## Prerequisites
 
@@ -148,29 +148,30 @@ src
 │   ├── java
 │   │   └── com
 │   │       └── example
-│   │           ├── ReactiveApplication.java
-│   │           ├── client
-│   │           │   └── WebClientExample.java
-│   │           ├── config
-│   │           │   └── WebFluxConfig.java
-│   │           ├── controller
-│   │           │   └── ProductController.java
-│   │           ├── exception
-│   │           │   └── GlobalErrorHandler.java
-│   │           ├── handler
-│   │           │   └── ProductHandler.java
-│   │           ├── metrics
-│   │           │   └── MetricsConfig.java
-│   │           ├── model
-│   │           │   └── Product.java
-│   │           ├── performance
-│   │           │   └── PerformanceExample.java
-│   │           ├── repository
-│   │           │   └── ProductRepository.java
-│   │           ├── router
-│   │           │   └── ProductRouter.java
-│   │           └── service
-│   │               └── ProductService.java
+│   │           └── springwebflux
+│   │               ├── ReactiveApplication.java
+│   │               ├── client
+│   │               │   └── WebClientExample.java
+│   │               ├── config
+│   │               │   └── WebFluxConfig.java
+│   │               ├── controller
+│   │               │   └── ProductController.java
+│   │               ├── exception
+│   │               │   └── GlobalErrorHandler.java
+│   │               ├── handler
+│   │               │   └── ProductHandler.java
+│   │               ├── metrics
+│   │               │   └── MetricsConfig.java
+│   │               ├── model
+│   │               │   └── Product.java
+│   │               ├── performance
+│   │               │   └── PerformanceExample.java
+│   │               ├── repository
+│   │               │   └── ProductRepository.java
+│   │               ├── router
+│   │               │   └── ProductRouter.java
+│   │               └── service
+│   │                   └── ProductService.java
 │   └── resources
 │       ├── application.properties
 │       └── static

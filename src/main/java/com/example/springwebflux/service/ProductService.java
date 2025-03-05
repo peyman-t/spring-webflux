@@ -8,6 +8,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.UUID;
 
@@ -17,6 +18,7 @@ public class ProductService {
 
     // For broadcasting product events to clients (for SSE)
     private final Sinks.Many<Product> productSink = Sinks.many().multicast().onBackpressureBuffer();
+//    private final Sinks.Many<Product> productSink = Sinks.many().replay().limit(10);
 
     @Autowired
     public ProductService(ProductRepository productRepository) {
@@ -46,7 +48,13 @@ public class ProductService {
             product.setId(UUID.randomUUID().toString());
         }
         return productRepository.save(product)
-                .doOnNext(p -> productSink.tryEmitNext(p));
+                .doOnNext(p -> {
+                    // Use a more robust emission method
+                    Sinks.EmitResult result = productSink.tryEmitNext(p);
+                    if (result.isFailure()) {
+                        System.err.println("Failed to emit product: " + result);
+                    }
+                });
     }
 
     public Mono<Product> updateProduct(String id, Product product) {
@@ -68,5 +76,13 @@ public class ProductService {
 
     public Flux<Product> getProductUpdates() {
         return productSink.asFlux();
+        // Return a heartbeat signal combined with product updates
+//        return Flux.merge(
+//                // Regular product updates
+//                productSink.asFlux(),
+//                // Heartbeat every 15 seconds to keep connection alive
+//                Flux.interval(Duration.ofSeconds(15))
+//                        .map(i -> new Product("heartbeat", "Connection alive", 0))
+//        );
     }
 }
