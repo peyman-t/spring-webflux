@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebFlux Products Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .live-updates {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-left: 5px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+<h1>WebFlux Products Demo</h1>
+
+<h2>Products</h2>
+<table id="productsTable">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- Products will be loaded here -->
+    </tbody>
+</table>
+
+<h2>Add New Product</h2>
+<div>
+    <div class="form-group">
+        <label for="productName">Name:</label>
+        <input type="text" id="productName" required>
+    </div>
+    <div class="form-group">
+        <label for="productPrice">Price:</label>
+        <input type="number" id="productPrice" step="0.01" min="0" required>
+    </div>
+    <button onclick="addProduct()">Add Product</button>
+</div>
+
+<h2>Filter Products</h2>
+<div>
+    <div class="form-group">
+        <label for="maxPrice">Cheaper than:</label>
+        <input type="number" id="maxPrice" step="0.01" min="0">
+    </div>
+    <button onclick="filterProducts()">Filter</button>
+    <button onclick="loadAllProducts()">Reset</button>
+    <button onclick="loadSortedProducts()">Sort by Name</button>
+</div>
+
+<div class="live-updates">
+    <h3>Live Updates</h3>
+    <div id="updates"></div>
+</div>
+
+<script>
+    // Load products when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAllProducts();
+        setupEventSource();
+    });
+
+    function loadAllProducts() {
+        fetch('/api/products')
+            .then(response => response.json())
+            .then(data => displayProducts(data))
+            .catch(error => console.error('Error loading products:', error));
+    }
+
+    function loadSortedProducts() {
+        fetch('/api/products/sorted')
+            .then(response => response.json())
+            .then(data => displayProducts(data))
+            .catch(error => console.error('Error loading sorted products:', error));
+    }
+
+    function filterProducts() {
+        const maxPrice = document.getElementById('maxPrice').value;
+        if (maxPrice) {
+            fetch(`/api/products?cheaperThan=${maxPrice}`)
+                .then(response => response.json())
+                .then(data => displayProducts(data))
+                .catch(error => console.error('Error filtering products:', error));
+        }
+    }
+
+    function displayProducts(products) {
+        const tbody = document.querySelector('#productsTable tbody');
+        tbody.innerHTML = '';
+
+        products.forEach(product => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name}</td>
+                    <td>$${product.price.toFixed(2)}</td>
+                    <td>
+                        <button onclick="deleteProduct('${product.id}')">Delete</button>
+                    </td>
+                `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function addProduct() {
+        const name = document.getElementById('productName').value;
+        const price = document.getElementById('productPrice').value;
+
+        if (!name || !price) {
+            alert('Please fill in all fields');
+            return;
+        }
+
+        const product = { name, price: parseFloat(price) };
+
+        fetch('/api/products', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(product)
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('productName').value = '';
+                document.getElementById('productPrice').value = '';
+                loadAllProducts();
+            })
+            .catch(error => console.error('Error adding product:', error));
+    }
+
+    function deleteProduct(id) {
+        fetch(`/api/products/${id}`, {
+            method: 'DELETE'
+        })
+            .then(() => loadAllProducts())
+            .catch(error => console.error('Error deleting product:', error));
+    }
+
+    function setupEventSource() {
+        const evtSource = new EventSource('/api/products/events');
+        const updatesDiv = document.getElementById('updates');
+
+        evtSource.onmessage = function(event) {
+            const product = JSON.parse(event.data);
+            const update = document.createElement('p');
+            update.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${product.name} ($${product.price.toFixed(2)})`;
+            updatesDiv.prepend(update);
+
+            // Keep only the last 5 updates
+            while (updatesDiv.children.length > 5) {
+                updatesDiv.removeChild(updatesDiv.lastChild);
+            }
+
+            // Also refresh the product list
+            loadAllProducts();
+        };
+
+        evtSource.onerror = function() {
+            console.error('EventSource failed. Reconnecting...');
+            evtSource.close();
+            setTimeout(setupEventSource, 5000);
+        };
+    }
+</script>
+</body>
+</html>
